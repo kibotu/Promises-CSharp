@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using Promises;
+﻿using Assets.Promises;
+using UnityEngine;
 using System.Threading;
 using System;
 using System.Collections.Generic;
