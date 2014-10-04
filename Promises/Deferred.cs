@@ -33,9 +33,7 @@ namespace Assets.Promises
                     {
                         Fail(ex);
                     }
-                });
-                _thread.Name = "Deferred.RunAsync(" + action + ")";
-                _thread.IsBackground = true;
+                }) {Name = "Deferred.RunAsync(" + action + ")", IsBackground = true};
                 _thread.Start();
             }
             return promise;

@@ -8,26 +8,26 @@ namespace Assets.Promises
     {
         public class CoroutineRunner : MonoBehaviour
         {
-            private static CoroutineRunner instance;
+            private static CoroutineRunner _instance;
 
             public static Coroutine<T> StartRoutine<T>(IEnumerator coroutine)
             {
-                if (!instance)
+                if (!_instance)
                 {
-                    var go = new GameObject("CoroutineManager");
-                    instance = go.AddComponent<CoroutineRunner>();
+                    var go = new GameObject("CoroutineManager") {hideFlags = HideFlags.HideInHierarchy};
+                    _instance = go.AddComponent<CoroutineRunner>();
                 }
-                return instance.StartCoroutine<T>(coroutine);
+                return _instance.StartCoroutine<T>(coroutine);
             }
 
             public static Coroutine<T> StartRoutine<T>(IEnumerator coroutine, Action<Coroutine<T>> callback)
             {
-                if (!instance)
+                if (!_instance)
                 {
-                    var go = new GameObject("CoroutineManager");
-                    instance = go.AddComponent<CoroutineRunner>();
+                    var go = new GameObject("CoroutineManager") {hideFlags = HideFlags.HideInHierarchy};
+                    _instance = go.AddComponent<CoroutineRunner>();
                 }
-                return instance.StartCoroutine(coroutine, callback);
+                return _instance.StartCoroutine(coroutine, callback);
             }
 
             public Coroutine<T> StartCoroutine<T>(IEnumerator coroutine)

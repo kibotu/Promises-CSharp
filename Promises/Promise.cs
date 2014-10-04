@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Linq;
 using System.Threading;
 
 namespace Assets.Promises
@@ -15,14 +16,13 @@ namespace Assets.Promises
     {
         public static Promise<T> WithAction<T>(Func<T> action)
         {
-            var deferred = new Deferred<T>();
-            deferred.action = action;
+            var deferred = new Deferred<T> {action = action};
             return deferred.RunAsync();
         }
 
         public static Promise<T> WithCoroutine<T>(IEnumerator coroutine)
         {
-            var deferred = new Deferred<T>();
+            var deferred = new Deferred<T> {coroutine = coroutine};
             return deferred.RunAsync(coroutine);
         }
 
@@ -32,9 +32,7 @@ namespace Assets.Promises
             var results = new object[promises.Length];
             int done = 0;
 
-            float initialProgress = 0f;
-            foreach (var p in promises)
-                initialProgress += p.progress;
+            float initialProgress = promises.Sum(p => p.progress);
             deferred.Progress(initialProgress/promises.Length);
 
             for (int i = 0, promisesLength = promises.Length; i < promisesLength; i++)
@@ -59,9 +57,7 @@ namespace Assets.Promises
                 {
                     if (deferred.state == PromiseState.Unfulfilled)
                     {
-                        float totalProgress = 0f;
-                        foreach (var p in promises)
-                            totalProgress += p.progress;
+                        float totalProgress = promises.Sum(p => p.progress);
                         deferred.Progress(totalProgress/promisesLength);
                     }
                 };
@@ -75,10 +71,7 @@ namespace Assets.Promises
             var deferred = new Deferred<T>();
             int failed = 0;
 
-            float initialProgress = 0f;
-            foreach (var p in promises)
-                if (p.progress > initialProgress)
-                    initialProgress = p.progress;
+            float initialProgress = promises.Select(p => p.progress).Concat(new[] {0f}).Max();
             deferred.Progress(initialProgress);
 
             for (int i = 0, promisesLength = promises.Length; i < promisesLength; i++)
@@ -102,10 +95,7 @@ namespace Assets.Promises
                 {
                     if (deferred.state == PromiseState.Unfulfilled)
                     {
-                        float maxProgress = 0f;
-                        foreach (var p in promises)
-                            if (p.progress > maxProgress)
-                                maxProgress = p.progress;
+                        float maxProgress = promises.Select(p => p.progress).Concat(new[] {0f}).Max();
                         deferred.Progress(maxProgress);
                     }
                 };
@@ -120,9 +110,7 @@ namespace Assets.Promises
             var results = new object[promises.Length];
             int done = 0;
 
-            float initialProgress = 0f;
-            foreach (var p in promises)
-                initialProgress += p.progress;
+            float initialProgress = promises.Sum(p => p.progress);
             deferred.Progress(initialProgress/promises.Length);
 
             for (int i = 0, promisesLength = promises.Length; i < promisesLength; i++)
@@ -137,18 +125,14 @@ namespace Assets.Promises
                 };
                 promise.OnFailed += error =>
                 {
-                    float totalProgress = 0f;
-                    foreach (var p in promises)
-                        totalProgress += p.state == PromiseState.Failed ? 1f : p.progress;
+                    float totalProgress = promises.Sum(p => p.state == PromiseState.Failed ? 1f : p.progress);
                     deferred.Progress(totalProgress/promisesLength);
                     if (++done == promisesLength)
                         deferred.Fulfill(results);
                 };
                 promise.OnProgressed += progress =>
                 {
-                    float totalProgress = 0f;
-                    foreach (var p in promises)
-                        totalProgress += p.progress;
+                    float totalProgress = promises.Sum(p => p.progress);
                     deferred.Progress(totalProgress/promisesLength);
                 };
             }
@@ -228,8 +212,13 @@ namespace Assets.Promises
 
         public Promise<TThen> Then<TThen>(Func<T, TThen> action)
         {
-            var deferred = new Deferred<TThen>();
-            deferred.action = () => action(result);
+            var deferred = new Deferred<TThen> {action = () => action(result)};
+            return Then(deferred.promise);
+        }
+
+        public Promise<TThen> Then<TThen>(IEnumerator coroutine)
+        {
+            var deferred = new Deferred<TThen> {coroutine = coroutine};
             return Then(deferred.promise);
         }
 
@@ -254,10 +243,7 @@ namespace Assets.Promises
 
         public Promise<T> Rescue(Func<Exception, T> action)
         {
-            var deferred = new Deferred<T>();
-            deferred.action = () => action(error);
-            deferred._depth = _depth;
-            deferred._fraction = 1f;
+            var deferred = new Deferred<T> {action = () => action(error), _depth = _depth, _fraction = 1f};
             deferred.Progress(_progress);
             addOnFulfilled(deferred.Fulfill);
             addOnFailed(error => deferred.RunAsync());
